@@ -85,6 +85,17 @@ if [ ! -f $ZIP ]; then
   exit 1
 fi
 
+
+# Function logger
+logger(){
+  if [ ! -f $LOG_DIR/krbd_control.log ]; then
+    touch $LOG_DIR/krbd_control.log
+  fi
+  mess=[$(date '+%Y-%m-%d %H:%M:%S')]" "$1
+  echo $mess >> $LOG_DIR/krbd_control.log
+  echo $mess
+}
+
 # Function init service
 service_init(){
   $KRBD --data-dir $DATA_DIR \
@@ -102,28 +113,28 @@ service_init(){
 # Function start service
 service_start(){
   if [ ! -f $RUN_DIR/KRBD.pid ]; then
-    echo "Start: try service starting..."
+    logger "Start: try service starting..."
     service_init
     sleep 5
     if [ -f $RUN_DIR/KRBD.pid ]; then
       pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
       if [ -f /proc/$pid/stat ]; then
-        echo "Start: service started successfully!"
+        logger "Start: service started successfully!"
       fi
     fi
   else
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
-      echo "Start: service already started"
+      logger "Start: service already started"
     else
-      echo "Start: service not started, but pid file is found. Tring start again..."
+      logger "Start: service not started, but pid file is found. Tring start again..."
       rm $RUN_DIR/KRBD.pid
       service_init
       sleep 5
       if [ -f $RUN_DIR/KRBD.pid ]; then
         pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
         if [ -f /proc/$pid/stat ]; then
-          echo "Start: service started successfully!"
+          logger "Start: service started successfully!"
         fi
       fi
     fi
@@ -133,7 +144,7 @@ service_start(){
 # Function stop service
 service_stop(){
   if [ -f $RUN_DIR/KRBD.pid ]; then
-    echo "Stop: try service stoping..."
+    logger "Stop: try service stoping..."
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
       kill $pid
@@ -141,30 +152,30 @@ service_stop(){
       for i in $(seq 1 $SIGTERM_TIMEOUT); do
         if [ ! -f /proc/$pid/stat ]; then
           rm $RUN_DIR/KRBD.pid
-          echo "Stop: service was stoped successfully!"
+          logger "Stop: service was stoped successfully!"
           break
         fi
         sleep 1
       done
       if [ -f $RUN_DIR/KRBD.pid ]; then
-        echo "Stop: error stop service! But, try again this..."
+        logger "Stop: error stop service! But, try again this..."
         kill -9 $pid
         sleep 5
         for i in $(seq 1 $SIGKILL_TIMEOUT); do
           if [ ! -f /proc/$pid/stat ]; then
             rm $RUN_DIR/KRBD.pid
-            echo "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
+            logger "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
             break
           fi
           sleep 1
         done
       fi
     else
-      echo "Stop: service not started, but pid file is found. Maybe, something is wrong..."
+      logger "Stop: service not started, but pid file is found. Maybe, something is wrong..."
       rm $RUN_DIR/KRBD.pid
     fi
   else
-    echo "Stop: service not started!"
+    logger "Stop: service not started!"
   fi
 }
 
@@ -176,12 +187,12 @@ archiver(){
       rm -rf -f blockchain
     fi
     mkdir blockchain
-    echo "Archiver: copying target files..."
+    logger "Archiver: copying target files..."
     cp $DATA_DIR/blocks.dat blockchain/blocks.dat
     cp $DATA_DIR/blockindexes.dat blockchain/blockindexes.dat
-    echo "Archiver: archiving target files..."
+    logger "Archiver: archiving target files..."
     $ZIP -r blockchain.zip blockchain
-    echo "Archiver: calculating md5sum..."
+    logger "Archiver: calculating md5sum..."
     md5sum blockchain.zip >> blockchain.txt
     rm -rf -f blockchain
     if [ -f $HTDOCS_DIR/blockchain.zip ]; then
@@ -192,18 +203,41 @@ archiver(){
     fi
     mv blockchain.zip $HTDOCS_DIR/blockchain.zip
     mv blockchain.txt $HTDOCS_DIR/blockchain.txt
-    echo "Archiver: ok!"
+    logger "Archiver: ok!"
   else
-    echo "Archiver: error - no found target files"
+    logger "Archiver: error - no found target files"
   fi
 }
 
+# Function checker
+checker(){
+  logger "Checker: init..."
+  if [ -f $RUN_DIR/KRBD.pid ]; then
+    pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
+    if [ -f /proc/$pid/stat ]; then
+      logger "Checker: all fine!"
+    else
+      logger "Checker: service not started, but pid file found!"
+      do_restart
+    fi
+  else
+    logger "Checker: service not was started!"
+  fi
+}
+
+do_restart(){
+  logger "Do restart: init procedure..."
+  service_stop
+  service_start
+  logger "Do restart: ok"
+}
+
 do_archiver(){
-  echo "Do archiver: init procedure..."
+  logger "Do archiver: init procedure..."
   service_stop
   archiver
   service_start
-  echo "Do archiver: ok"
+  logger "Do archiver: ok"
 }
 
 if [ "$1" = "--start" ]; then
@@ -214,7 +248,14 @@ if [ "$1" = "--stop" ]; then
   service_stop
 fi
 
+if [ "$1" = "--restart" ]; then
+  do_restart
+fi
+
+if [ "$1" = "--checker" ]; then
+  checker
+fi
+
 if [ "$1" = "--archive" ]; then
   do_archiver
 fi
-
