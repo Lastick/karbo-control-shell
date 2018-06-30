@@ -134,6 +134,22 @@ service_init(){
         --fee-address $KRBD_FEE_ADDRESS > /dev/null & echo $! > $RUN_DIR/KRBD.pid
 }
 
+# Function is ready
+service_is_ready(){
+  sleep 5
+  for i in $(seq 1 30); do
+    if [ -f $RUN_DIR/KRBD.pid ]; then
+      pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
+      cpu_load=$(top -b -n 1 -d 1 -p $pid | grep $pid | sed 's/^\s//g' | sed 's/\s\+/\n/g' | sed -n 9p | sed 's/[^0-9,]*//g' | sed 's/,.*//g')
+      logger "-> Node load CPU: "$cpu_load
+      if [ "$cpu_load" -lt 5 ]; then
+        break
+      fi
+    fi
+    sleep 3
+  done
+}
+
 # Function start service
 service_start(){
   if [ ! -f $RUN_DIR/KRBD.pid ]; then
@@ -286,7 +302,7 @@ do_restart(){
   service_start
   if [ "$IS_KRBS" = "run" ]; then
     logger "Do restart: Simplewallet will be started again. Waiting for the node to be ready..."
-    sleep 15
+    service_is_ready
     logger "Do restart: starting Simplewallet service..."
     $KRBS_CONTROL --start > /dev/null
   fi
