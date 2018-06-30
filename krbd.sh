@@ -4,7 +4,7 @@ DATA_DIR="/home/sasha/KRB/data"
 LOG_DIR="/home/sasha/KRB/log"
 RUN_DIR="/home/sasha/KRB/run"
 TMP_DIR="/home/sasha/KRB/tmp"
-HTDOCS_DIR="/var/www/html/blockchain"
+HTDOCS_DIR="/home/sasha/KRB/htdocs/blockchain"
 
 KRBD="/home/sasha/KRB/bin/karbowanecd"
 
@@ -96,6 +96,22 @@ logger(){
   echo $mess
 }
 
+# Funstion locker
+locker(){
+  if [ "$1" = "check" ]; then
+    if [ -f $RUN_DIR/krbd_control.lock ]; then
+      logger "Locker: previous task is not completed. Exiting..."
+      exit 0
+    fi
+  fi
+  if [ "$1" = "init" ]; then
+    touch $RUN_DIR/krbd_control.lock
+  fi
+    if [ "$1" = "end" ]; then
+    rm -f $RUN_DIR/krbd_control.lock
+  fi
+}
+
 # Function init service
 service_init(){
   $KRBD --data-dir $DATA_DIR \
@@ -128,7 +144,7 @@ service_start(){
       logger "Start: service already started"
     else
       logger "Start: service not started, but pid file is found. Tring start again..."
-      rm $RUN_DIR/KRBD.pid
+      rm -f $RUN_DIR/KRBD.pid
       service_init
       sleep 5
       if [ -f $RUN_DIR/KRBD.pid ]; then
@@ -151,7 +167,7 @@ service_stop(){
       sleep 5
       for i in $(seq 1 $SIGTERM_TIMEOUT); do
         if [ ! -f /proc/$pid/stat ]; then
-          rm $RUN_DIR/KRBD.pid
+          rm -f $RUN_DIR/KRBD.pid
           logger "Stop: service was stoped successfully!"
           break
         fi
@@ -163,7 +179,7 @@ service_stop(){
         sleep 5
         for i in $(seq 1 $SIGKILL_TIMEOUT); do
           if [ ! -f /proc/$pid/stat ]; then
-            rm $RUN_DIR/KRBD.pid
+            rm -f $RUN_DIR/KRBD.pid
             logger "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
             break
           fi
@@ -172,7 +188,7 @@ service_stop(){
       fi
     else
       logger "Stop: service not started, but pid file is found. Maybe, something is wrong..."
-      rm $RUN_DIR/KRBD.pid
+      rm -f $RUN_DIR/KRBD.pid
     fi
   else
     logger "Stop: service not started!"
@@ -196,10 +212,10 @@ archiver(){
     md5sum blockchain.zip >> blockchain.txt
     rm -rf -f blockchain
     if [ -f $HTDOCS_DIR/blockchain.zip ]; then
-      rm $HTDOCS_DIR/blockchain.zip
+      rm -f $HTDOCS_DIR/blockchain.zip
     fi
     if [ -f $HTDOCS_DIR/blockchain.txt ]; then
-      rm $HTDOCS_DIR/blockchain.txt
+      rm -f $HTDOCS_DIR/blockchain.txt
     fi
     mv blockchain.zip $HTDOCS_DIR/blockchain.zip
     mv blockchain.txt $HTDOCS_DIR/blockchain.txt
@@ -240,22 +256,30 @@ do_archiver(){
   logger "Do archiver: ok"
 }
 
-if [ "$1" = "--start" ]; then
+
+# Command selector
+locker "check"
+locker "init"
+
+case "$1" in
+  "--start")
   service_start
-fi
-
-if [ "$1" = "--stop" ]; then
+  ;;
+  "--stop")
   service_stop
-fi
-
-if [ "$1" = "--restart" ]; then
+  ;;
+  "--restart")
   do_restart
-fi
-
-if [ "$1" = "--checker" ]; then
+  ;;
+  "--checker")
   checker
-fi
-
-if [ "$1" = "--archive" ]; then
+  ;;
+  "--archive")
   do_archiver
-fi
+  ;;
+  *)
+  logger "Selector: command selection error!"
+  ;;
+esac
+
+locker "end"
