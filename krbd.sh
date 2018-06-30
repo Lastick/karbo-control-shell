@@ -323,7 +323,7 @@ case "$1" in
   do_restart
   ;;
   "--check")
-  do_checker
+  do_check
   ;;
   "--archive")
   do_archiver
