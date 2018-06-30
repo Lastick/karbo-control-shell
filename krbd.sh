@@ -15,6 +15,8 @@ KRBD_RPC_PORT="32348"
 KRBD_LOG_LEVEL="2"
 KRBD_FEE_ADDRESS="Ke5tURH8PotZfvk3B444EtEu29PwtjTND4SBmw1NL7gd9gZ6y78F9cz4ZKepay2o2uH4HXu4poTUeJ4FyQMiaTukLKgrpLS"
 
+KRBS_CONTROL="/home/sasha/KRB/init/krbs.sh"
+
 SIGTERM_TIMEOUT=240
 SIGKILL_TIMEOUT=120
 
@@ -74,7 +76,7 @@ else
   exit 1
 fi
 
-# Check all bin files
+# Check all files
 if [ ! -f $KRBD ]; then
   echo "Error: DEAMON bin file not found!"
   exit 1
@@ -84,6 +86,12 @@ if [ ! -f $ZIP ]; then
   echo "Error: ZIP archiver bin file not found!"
   exit 1
 fi
+
+if [ ! -f $KRBS_CONTROL ]; then
+  echo "Error: KRBS start script file not found!"
+  exit 1
+fi
+
 
 
 # Function logger
@@ -119,10 +127,10 @@ service_init(){
         --log-level $KRBD_LOG_LEVEL \
         --restricted-rpc \
         --no-console \
-        --rpc-bind-ip $KRBD_P2P_IP \
-        --rpc-bind-port $KRBD_P2P_PORT \
-        --p2p-bind-ip $KRBD_RPC_IP \
-        --p2p-bind-port $KRBD_RPC_PORT \
+        --p2p-bind-ip $KRBD_P2P_IP \
+        --p2p-bind-port $KRBD_P2P_PORT \
+        --rpc-bind-ip $KRBD_RPC_IP \
+        --rpc-bind-port $KRBD_RPC_PORT \
         --fee-address $KRBD_FEE_ADDRESS > /dev/null & echo $! > $RUN_DIR/KRBD.pid
 }
 
@@ -241,11 +249,54 @@ checker(){
   fi
 }
 
+# Fucntion check simplewallet is was started
+IS_KRBS="stop"
+is_run_simplewallet(){
+  if [ -f $RUN_DIR/KRBD.pid ]; then
+    IS_KRBS="run"
+  fi
+}
+
+
+do_start(){
+  logger "Do start: init procedure..."
+  service_start
+  logger "Do start: ok"
+}
+
+do_stop(){
+  is_run_simplewallet
+  logger "Do stop: init procedure..."
+  if [ "$IS_KRBS" = "run" ]; then
+    logger "Do stop: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
+    $KRBS_CONTROL --stop > /dev/null
+  fi
+  service_stop
+  logger "Do stop: ok"
+}
+
 do_restart(){
+  is_run_simplewallet
   logger "Do restart: init procedure..."
+  if [ "$IS_KRBS" = "run" ]; then
+    logger "Do restart: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
+    $KRBS_CONTROL --stop > /dev/null
+  fi
   service_stop
   service_start
+  if [ "$IS_KRBS" = "run" ]; then
+    logger "Do restart: Simplewallet will be started again. Waiting for the node to be ready..."
+    sleep 15
+    logger "Do restart: starting Simplewallet service..."
+    $KRBS_CONTROL --start > /dev/null
+  fi
   logger "Do restart: ok"
+}
+
+do_check(){
+  logger "Do check: init procedure..."
+  checker
+  logger "Do check: ok"
 }
 
 do_archiver(){
@@ -263,16 +314,16 @@ locker "init"
 
 case "$1" in
   "--start")
-  service_start
+  do_start
   ;;
   "--stop")
-  service_stop
+  do_stop
   ;;
   "--restart")
   do_restart
   ;;
-  "--checker")
-  checker
+  "--check")
+  do_checker
   ;;
   "--archive")
   do_archiver
