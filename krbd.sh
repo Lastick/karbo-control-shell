@@ -268,7 +268,7 @@ checker(){
 # Fucntion check simplewallet is was started
 IS_KRBS="stop"
 is_run_simplewallet(){
-  if [ -f $RUN_DIR/KRBD.pid ]; then
+  if [ -f $RUN_DIR/KRBS.pid ]; then
     IS_KRBS="run"
   fi
 }

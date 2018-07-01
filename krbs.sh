@@ -170,6 +170,19 @@ service_stop(){
   fi
 }
 
+
+do_start(){
+  logger "Do start: init procedure..."
+  service_start
+  logger "Do start: ok"
+}
+
+do_stop(){
+  logger "Do stop: init procedure..."
+  service_stop
+  logger "Do stop: ok"
+}
+
 do_restart(){
   logger "Do restart: init procedure..."
   service_stop
@@ -184,10 +197,10 @@ locker "init"
 
 case "$1" in
   "--start")
-  service_start
+  do_start
   ;;
   "--stop")
-  service_stop
+  do_stop
   ;;
   "--restart")
   do_restart
