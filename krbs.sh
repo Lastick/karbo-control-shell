@@ -135,28 +135,28 @@ service_init(){
 # Function start service
 service_start(){
   if [ ! -f $RUN_DIR/KRBS.pid ]; then
-    logger "Start: try service starting..."
+    logger "START: trying to start service..."
     service_init
     sleep 5
     if [ -f $RUN_DIR/KRBS.pid ]; then
       pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
       if [ -f /proc/$pid/stat ]; then
-        logger "Start: service started successfully!"
+        logger "START: success!"
       fi
     fi
   else
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
     if [ -f /proc/$pid/stat ]; then
-      logger "Start: service already started"
+      logger "START: process is already running"
     else
-      logger "Start: service not started, but pid file is found. Tring start again..."
+      logger "START: abnormal termination detected; starting..."
       rm -f $RUN_DIR/KRBS.pid
       service_init
       sleep 5
       if [ -f $RUN_DIR/KRBS.pid ]; then
         pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
         if [ -f /proc/$pid/stat ]; then
-          logger "Start: service started successfully!"
+          logger "START: success!"
         fi
       fi
     fi
@@ -203,22 +203,22 @@ service_stop(){
 
 
 do_start(){
-  logger "Do start: init procedure..."
+  logger "DO START: procedure initializing..."
   service_start
-  logger "Do start: ok"
+  logger "DO START: ok"
 }
 
 do_stop(){
-  logger "Do stop: init procedure..."
+  logger "DO STOP: procedure initializing..."
   service_stop
-  logger "Do stop: ok"
+  logger "DO STOP: ok"
 }
 
 do_restart(){
-  logger "Do restart: init procedure..."
+  logger "DO RESTART: procedure initializing..."
   service_stop
   service_start
-  logger "Do restart: ok"
+  logger "DO RESTART: ok"
 }
 
 
@@ -237,7 +237,7 @@ case "$1" in
   do_restart
   ;;
   *)
-  logger "Selector: command selection error!"
+  logger "SELECTOR: unknown command"
   ;;
 esac
 
