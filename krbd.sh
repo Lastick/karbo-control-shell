@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Copyright (c) 2016-2018, Karbo developers (Aiwe, Lastick)
+# English correction by Grabbers
 #
 # All rights reserved
 #
@@ -54,7 +55,7 @@ ZIP="/usr/bin/zip"
 
 ## Base check
 
-# Check all sys directories
+# Check all work directories
 if [ -d $DATA_DIR ]; then
   if [ ! -w $DATA_DIR ]; then
     echo "Error: DATA dir not writable!"
@@ -137,7 +138,7 @@ logger(){
 locker(){
   if [ "$1" = "check" ]; then
     if [ -f $RUN_DIR/krbd_control.lock ]; then
-      logger "Locker: previous task is not completed. Exiting..."
+      logger "LOCKER: previous task is not completed; exiting..."
       exit 0
     fi
   fi
@@ -198,7 +199,7 @@ service_start(){
 # Function stop service
 service_stop(){
   if [ -f $RUN_DIR/KRBD.pid ]; then
-    logger "Stop: try service stoping..."
+    logger "STOP: attempting to stop the service..."
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
       kill $pid
@@ -206,36 +207,36 @@ service_stop(){
       for i in $(seq 1 $SIGTERM_TIMEOUT); do
         if [ ! -f /proc/$pid/stat ]; then
           rm -f $RUN_DIR/KRBD.pid
-          logger "Stop: service was stoped successfully!"
+          logger "STOP: success!"
           break
         fi
         sleep 1
       done
       if [ -f $RUN_DIR/KRBD.pid ]; then
-        logger "Stop: error stop service! But, try again this..."
+        logger "STOP: attempt failed, trying again..."
         kill -9 $pid
         sleep 5
         for i in $(seq 1 $SIGKILL_TIMEOUT); do
           if [ ! -f /proc/$pid/stat ]; then
             rm -f $RUN_DIR/KRBD.pid
-            logger "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
+            logger "STOP: service has been killed (SIGKILL) due to ERROR!"
             break
           fi
           sleep 1
         done
       fi
     else
-      logger "Stop: service not started, but pid file is found. Maybe, something is wrong..."
+      logger "STOP: PID file found, but service not detected; possible error..."
       rm -f $RUN_DIR/KRBD.pid
     fi
   else
-    logger "Stop: service not started!"
+    logger "STOP: no service found!"
   fi
 }
 
 # Function archiver blockchain
 archiver(){
-  logger "ARCHIVER: begin..."
+  logger "ARCHIVER: began"
   if [ -f $DATA_DIR/blocks.dat ] && [ -f $DATA_DIR/blockindexes.dat ]; then
     cd $TMP_DIR
     if [ -d blockchain ]; then
@@ -245,7 +246,7 @@ archiver(){
     logger "ARCHIVER: copying target files..."
     cp $DATA_DIR/blocks.dat blockchain/blocks.dat
     cp $DATA_DIR/blockindexes.dat blockchain/blockindexes.dat
-    logger "ARCHIVER: archiving target files..."
+    logger "ARCHIVER: packing target files..."
     $ZIP -r blockchain.zip blockchain
     logger "ARCHIVER: calculating md5sum..."
     md5sum blockchain.zip >> blockchain.txt
@@ -258,15 +259,15 @@ archiver(){
     fi
     mv blockchain.zip $HTDOCS_DIR/blockchain.zip
     mv blockchain.txt $HTDOCS_DIR/blockchain.txt
-    logger "ARCHIVER: ok!"
+    logger "ARCHIVER: finished!"
   else
-    logger "ARCHIVER: error - no found target files"
+    logger "ARCHIVER: error, target files not found!"
   fi
 }
 
 # Function checker
 checker(){
-  logger "CHECKER: begin..."
+  logger "CHECKER: began"
   if [ -f $RUN_DIR/KRBD.pid ]; then
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
@@ -275,6 +276,7 @@ checker(){
       logger "CHECKER: abnormal termination detected; restarting..."
       do_restart
     fi
+    logger "CHECKER: finished!"
   else
     logger "CHECKER: target service not found"
   fi
@@ -308,7 +310,7 @@ do_stop(){
 
 do_restart(){
   is_run_simplewallet
-  logger "DO RESTART: init procedure..."
+  logger "DO RESTART: procedure initializing..."
   if [ "$IS_KRBS" = "run" ]; then
     logger "DO RESTART: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
     $KRBS_CONTROL --stop > /dev/null
