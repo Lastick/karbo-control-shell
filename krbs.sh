@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Copyright (c) 2016-2018, Karbo developers (Aiwe, Lastick)
+# English correction by Grabbers
 #
 # All rights reserved
 #
@@ -51,7 +52,7 @@ KRBS_WALLET=$DATA_DIR/$KRBS_WALLET
 
 ## Base check
 
-# Check all sys directories
+# Check all work directories
 if [ -d $DATA_DIR ]; then
   if [ ! -w $DATA_DIR ]; then
     echo "Error: DATA dir not writable!"
@@ -108,7 +109,7 @@ logger(){
 locker(){
   if [ "$1" = "check" ]; then
     if [ -f $RUN_DIR/krbs_control.lock ]; then
-      logger "Locker: previous task is not completed. Exiting..."
+      logger "LOCKER: previous task is not completed; exiting..."
       exit 0
     fi
   fi
@@ -135,28 +136,28 @@ service_init(){
 # Function start service
 service_start(){
   if [ ! -f $RUN_DIR/KRBS.pid ]; then
-    logger "Start: try service starting..."
+    logger "START: trying to start service..."
     service_init
     sleep 5
     if [ -f $RUN_DIR/KRBS.pid ]; then
       pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
       if [ -f /proc/$pid/stat ]; then
-        logger "Start: service started successfully!"
+        logger "START: success!"
       fi
     fi
   else
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
     if [ -f /proc/$pid/stat ]; then
-      logger "Start: service already started"
+      logger "START: process is already running"
     else
-      logger "Start: service not started, but pid file is found. Tring start again..."
+      logger "START: abnormal termination detected; starting..."
       rm -f $RUN_DIR/KRBS.pid
       service_init
       sleep 5
       if [ -f $RUN_DIR/KRBS.pid ]; then
         pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
         if [ -f /proc/$pid/stat ]; then
-          logger "Start: service started successfully!"
+          logger "START: success!"
         fi
       fi
     fi
@@ -166,7 +167,7 @@ service_start(){
 # Function stop service
 service_stop(){
   if [ -f $RUN_DIR/KRBS.pid ]; then
-    logger "Stop: try service stoping..."
+    logger "STOP: attempting to stop the service..."
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBS.pid)
     if [ -f /proc/$pid/stat ]; then
       kill $pid
@@ -174,51 +175,51 @@ service_stop(){
       for i in $(seq 1 $SIGTERM_TIMEOUT); do
         if [ ! -f /proc/$pid/stat ]; then
           rm -f $RUN_DIR/KRBS.pid
-          logger "Stop: service was stoped successfully!"
+          logger "STOP: success!"
           break
         fi
         sleep 1
       done
       if [ -f $RUN_DIR/KRBS.pid ]; then
-        logger "Stop: error stop service! But, try again this..."
+        logger "STOP: attempt failed, trying again..."
         kill -9 $pid
         sleep 5
         for i in $(seq 1 $SIGKILL_TIMEOUT); do
           if [ ! -f /proc/$pid/stat ]; then
             rm -f $RUN_DIR/KRBS.pid
-            logger "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
+            logger "STOP: service has been killed (SIGKILL) due to ERROR!"
             break
           fi
           sleep 1
         done
       fi
     else
-      logger "Stop: service not started, but pid file is found. Maybe, something is wrong..."
+      logger "STOP: PID file found, but service not detected; possible error..."
       rm -f $RUN_DIR/KRBS.pid
     fi
   else
-    logger "Stop: service not started!"
+    logger "STOP: no service found!"
   fi
 }
 
 
 do_start(){
-  logger "Do start: init procedure..."
+  logger "DO START: procedure initializing..."
   service_start
-  logger "Do start: ok"
+  logger "DO START: ok"
 }
 
 do_stop(){
-  logger "Do stop: init procedure..."
+  logger "DO STOP: procedure initializing..."
   service_stop
-  logger "Do stop: ok"
+  logger "DO STOP: ok"
 }
 
 do_restart(){
-  logger "Do restart: init procedure..."
+  logger "DO RESTART: procedure initializing..."
   service_stop
   service_start
-  logger "Do restart: ok"
+  logger "DO RESTART: ok"
 }
 
 
@@ -237,7 +238,7 @@ case "$1" in
   do_restart
   ;;
   *)
-  logger "Selector: command selection error!"
+  logger "SELECTOR: unknown command"
   ;;
 esac
 
