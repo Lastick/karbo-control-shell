@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Copyright (c) 2016-2018, Karbo developers (Aiwe, Lastick)
+# English correction by Grabbers
 #
 # All rights reserved
 #
@@ -54,7 +55,7 @@ ZIP="/usr/bin/zip"
 
 ## Base check
 
-# Check all sys directories
+# Check all work directories
 if [ -d $DATA_DIR ]; then
   if [ ! -w $DATA_DIR ]; then
     echo "Error: DATA dir not writable!"
@@ -137,7 +138,7 @@ logger(){
 locker(){
   if [ "$1" = "check" ]; then
     if [ -f $RUN_DIR/krbd_control.lock ]; then
-      logger "Locker: previous task is not completed. Exiting..."
+      logger "LOCKER: previous task is not completed; exiting..."
       exit 0
     fi
   fi
@@ -183,28 +184,28 @@ service_is_ready(){
 # Function start service
 service_start(){
   if [ ! -f $RUN_DIR/KRBD.pid ]; then
-    logger "Start: try service starting..."
+    logger "START: trying to start service..."
     service_init
     sleep 5
     if [ -f $RUN_DIR/KRBD.pid ]; then
       pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
       if [ -f /proc/$pid/stat ]; then
-        logger "Start: service started successfully!"
+        logger "START: success!"
       fi
     fi
   else
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
-      logger "Start: service already started"
+      logger "START: process is already running"
     else
-      logger "Start: service not started, but pid file is found. Tring start again..."
+      logger "START: abnormal termination detected; starting..."
       rm -f $RUN_DIR/KRBD.pid
       service_init
       sleep 5
       if [ -f $RUN_DIR/KRBD.pid ]; then
         pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
         if [ -f /proc/$pid/stat ]; then
-          logger "Start: service started successfully!"
+          logger "START: success!"
         fi
       fi
     fi
@@ -214,7 +215,7 @@ service_start(){
 # Function stop service
 service_stop(){
   if [ -f $RUN_DIR/KRBD.pid ]; then
-    logger "Stop: try service stoping..."
+    logger "STOP: attempting to stop the service..."
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
       kill $pid
@@ -222,47 +223,48 @@ service_stop(){
       for i in $(seq 1 $SIGTERM_TIMEOUT); do
         if [ ! -f /proc/$pid/stat ]; then
           rm -f $RUN_DIR/KRBD.pid
-          logger "Stop: service was stoped successfully!"
+          logger "STOP: success!"
           break
         fi
         sleep 1
       done
       if [ -f $RUN_DIR/KRBD.pid ]; then
-        logger "Stop: error stop service! But, try again this..."
+        logger "STOP: attempt failed, trying again..."
         kill -9 $pid
         sleep 5
         for i in $(seq 1 $SIGKILL_TIMEOUT); do
           if [ ! -f /proc/$pid/stat ]; then
             rm -f $RUN_DIR/KRBD.pid
-            logger "Stop: sended SIGKILL (kill -9) and remove PID file. Service stoped extremaly!"
+            logger "STOP: service has been killed (SIGKILL) due to ERROR!"
             break
           fi
           sleep 1
         done
       fi
     else
-      logger "Stop: service not started, but pid file is found. Maybe, something is wrong..."
+      logger "STOP: PID file found, but service not detected; possible error..."
       rm -f $RUN_DIR/KRBD.pid
     fi
   else
-    logger "Stop: service not started!"
+    logger "STOP: no service found!"
   fi
 }
 
 # Function archiver blockchain
 archiver(){
+  logger "ARCHIVER: began"
   if [ -f $DATA_DIR/blocks.dat ] && [ -f $DATA_DIR/blockindexes.dat ]; then
     cd $TMP_DIR
     if [ -d blockchain ]; then
       rm -rf -f blockchain
     fi
     mkdir blockchain
-    logger "Archiver: copying target files..."
+    logger "ARCHIVER: copying target files..."
     cp $DATA_DIR/blocks.dat blockchain/blocks.dat
     cp $DATA_DIR/blockindexes.dat blockchain/blockindexes.dat
-    logger "Archiver: archiving target files..."
+    logger "ARCHIVER: packing target files..."
     $ZIP -r blockchain.zip blockchain
-    logger "Archiver: calculating md5sum..."
+    logger "ARCHIVER: calculating md5sum..."
     md5sum blockchain.zip >> blockchain.txt
     rm -rf -f blockchain
     if [ -f $HTDOCS_DIR/blockchain.zip ]; then
@@ -273,25 +275,26 @@ archiver(){
     fi
     mv blockchain.zip $HTDOCS_DIR/blockchain.zip
     mv blockchain.txt $HTDOCS_DIR/blockchain.txt
-    logger "Archiver: ok!"
+    logger "ARCHIVER: finished!"
   else
-    logger "Archiver: error - no found target files"
+    logger "ARCHIVER: error, target files not found!"
   fi
 }
 
 # Function checker
 checker(){
-  logger "Checker: init..."
+  logger "CHECKER: began"
   if [ -f $RUN_DIR/KRBD.pid ]; then
     pid=$(sed 's/[^0-9]*//g' $RUN_DIR/KRBD.pid)
     if [ -f /proc/$pid/stat ]; then
-      logger "Checker: all fine!"
+      logger "CHECKER: all fine!"
     else
-      logger "Checker: service not started, but pid file found!"
+      logger "CHECKER: abnormal termination detected; restarting..."
       do_restart
     fi
+    logger "CHECKER: finished!"
   else
-    logger "Checker: service not was started!"
+    logger "CHECKER: target service not found"
   fi
 }
 
@@ -305,52 +308,52 @@ is_run_simplewallet(){
 
 
 do_start(){
-  logger "Do start: init procedure..."
+  logger "DO START: procedure initializing..."
   service_start
-  logger "Do start: ok"
+  logger "DO START: ok"
 }
 
 do_stop(){
   is_run_simplewallet
-  logger "Do stop: init procedure..."
+  logger "DO STOP: procedure initializing..."
   if [ "$IS_KRBS" = "run" ]; then
-    logger "Do stop: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
+    logger "DO STOP: stopping dependant service..."
     $KRBS_CONTROL --stop > /dev/null
   fi
   service_stop
-  logger "Do stop: ok"
+  logger "DO STOP: ok"
 }
 
 do_restart(){
   is_run_simplewallet
-  logger "Do restart: init procedure..."
+  logger "DO RESTART: procedure initializing..."
   if [ "$IS_KRBS" = "run" ]; then
-    logger "Do restart: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
+    logger "DO RESTART: Simplewallet was started and will be stopped. Stopping Simplewallet service..."
     $KRBS_CONTROL --stop > /dev/null
   fi
   service_stop
   service_start
   if [ "$IS_KRBS" = "run" ]; then
-    logger "Do restart: Simplewallet will be started again. Waiting for the node to be ready..."
+    logger "DO RESTART: Simplewallet will be started again. Waiting for the node to be ready..."
     service_is_ready
-    logger "Do restart: starting Simplewallet service..."
+    logger "DO RESTART: starting Simplewallet service..."
     $KRBS_CONTROL --start > /dev/null
   fi
-  logger "Do restart: ok"
+  logger "DO RESTART: ok"
 }
 
 do_check(){
-  logger "Do check: init procedure..."
+  logger "DO CHECK: procedure initializing..."
   checker
-  logger "Do check: ok"
+  logger "DO CHECK: ok"
 }
 
 do_archiver(){
-  logger "Do archiver: init procedure..."
+  logger "DO ARCHIVER: procedure initializing..."
   service_stop
   archiver
   service_start
-  logger "Do archiver: ok"
+  logger "DO ARCHIVER: ok"
 }
 
 
@@ -375,7 +378,7 @@ case "$1" in
   do_archiver
   ;;
   *)
-  logger "Selector: command selection error!"
+  logger "SELECTOR: unknown command"
   ;;
 esac
 
