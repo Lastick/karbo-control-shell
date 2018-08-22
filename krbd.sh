@@ -44,6 +44,7 @@ KRBD_RPC_IP="127.0.0.1"
 KRBD_RPC_PORT="32348"
 KRBD_LOG_LEVEL="2"
 KRBD_FEE_ADDRESS="Ke5tURH8PotZfvk3B444EtEu29PwtjTND4SBmw1NL7gd9gZ6y78F9cz4ZKepay2o2uH4HXu4poTUeJ4FyQMiaTukLKgrpLS"
+KRBD_VIEW_KEY=""
 
 KRBS_CONTROL="/home/sasha/KRB/init/krbs.sh"
 
@@ -162,7 +163,8 @@ service_init(){
         --p2p-bind-port $KRBD_P2P_PORT \
         --rpc-bind-ip $KRBD_RPC_IP \
         --rpc-bind-port $KRBD_RPC_PORT \
-        --fee-address $KRBD_FEE_ADDRESS > /dev/null & echo $! > $RUN_DIR/KRBD.pid
+        --fee-address $KRBD_FEE_ADDRESS \
+        --view-key $KRBD_VIEW_KEY > /dev/null & echo $! > $RUN_DIR/KRBD.pid
 }
 
 # Function is ready
